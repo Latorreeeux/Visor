@@ -2,42 +2,47 @@
 
 ## Context
 
-El proyecto no contiene código previo ni especificaciones existentes para reutilizar. La solución se implementará en un único `app.py`, según la propuesta y los requisitos de `specs/visualizacion-espacial-grafitis/spec.md`.
+El proyecto cuenta con una interfaz inicial que usa datos aleatorios. La fuente oficial consultada es la capa `Muros intervenidos` (capa 1) del servicio ArcGIS REST de Arte Urbano Responsable de la SCRD. Al 7 de octubre de 2026, la consulta devolvió 96 puntos y registros con año 2018 o 2019; el catálogo indica fecha del dato 2025-09-30. Esta cobertura corresponde a intervenciones documentadas, no a todos los grafitis de Bogotá.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Mantener los datos simulados estables mientras el usuario alterna las vistas durante una sesión de Streamlit.
-- Separar la generación del GeoJSON y la construcción del mapa en funciones pequeñas dentro del mismo archivo.
-- Mostrar ambas representaciones sobre la misma extensión geográfica y capa base.
+- Sustituir por completo la generación aleatoria por la descarga de GeoJSON desde el servicio distrital.
+- Mantener los puntos cargados mientras el usuario alterna entre calor y clústeres, y evitar consultar el servicio en cada rerun.
+- Atribuir claramente la fuente y su alcance limitado en la interfaz.
+- Informar errores de consulta sin mostrar datos inventados como fallback.
 
 **Non-Goals:**
 
-- Consultar o almacenar ubicaciones reales de grafitis.
-- Añadir persistencia entre sesiones, filtros por localidad o tipo, o edición de puntos.
-- Añadir archivos de aplicación adicionales al `app.py` solicitado.
+- Mapear grafitis no registrados por el programa distrital.
+- Usar la capa "Muros disponibles", que representa superficies candidatas para futuras intervenciones.
+- Mantener una copia local de los datos o almacenar los registros de manera persistente.
 
 ## Decisions
 
-### Generación y conservación del GeoJSON
+### Fuente y formato
 
-Se generará un `FeatureCollection` con puntos aleatorios agrupados alrededor de los dos epicentros indicados. Se crearán suficientes puntos en cada epicentro para que ambos sean visibles como concentraciones; las propiedades incluirán identificador, artista, localidad y un tipo de los valores Mural, Tag o Stencil. El GeoJSON se serializará con `json` y se guardará en `st.session_state`; en reruns posteriores se volverá a cargar desde esa cadena, evitando que el cambio de radio regenere las ubicaciones. Se elige este enfoque frente a volver a generar puntos en cada rerun porque conserva la continuidad visual sin mantener una fuente externa.
+Consultar el endpoint público `https://serviciosgis.catastrobogota.gov.co/arcgis/rest/services/recreaciondeporte/arteurbanoresponsable/MapServer/1/query` con `where=1=1`, `returnGeometry=true` y `f=geojson`. La respuesta conserva las coordenadas y los nombres de campo publicados por ArcGIS. Se elige el GeoJSON del servicio REST frente a descargar un archivo estático para aprovechar futuras actualizaciones de la fuente.
 
-### Construcción de las vistas
+### Campos mostrados
 
-Cada rerun creará un mapa Folium nuevo, centrado en `4.6097, -74.0817`, con zoom 12 y `cartodbdark_matter`. La selección lateral decidirá entre `HeatMap` con pares latitud-longitud y `MarkerCluster` con marcadores y popups HTML. Se usará `st_folium` en el área principal con un tamaño amplio para la interacción.
+Usar `LECNOMARTI` (artista), `LECTITOBRA` (obra), `LECANIO` (año), `LECNOMLOC` (localidad), `LECTIPOFOR` (formato) y `LECTEMATIC` (temática) cuando tengan valor. Omitir en el popup los campos vacíos. No inferir ni crear un tipo de grafiti que la fuente no publique.
 
-### Dependencias
+### Caché y fallos
 
-Se usarán Streamlit, Folium y `streamlit-folium`, además de `json` y `random` de la biblioteca estándar. No se añadirá un archivo de dependencias separado para respetar el requisito de entregar todo el código de la aplicación en `app.py`; la ejecución presupone que esos paquetes de terceros están instalados.
+Cachear la respuesta GeoJSON por un periodo limitado para estabilizar los reruns de Streamlit y reducir llamadas al servicio. Validar que la respuesta sea un `FeatureCollection` con puntos. Si la red, el servidor o el contenido falla, detener el mapa con un mensaje claro y un enlace a la fuente; nunca volver a los datos simulados.
+
+### Interfaz y atribución
+
+Conservar el mapa Folium y los modos `HeatMap` y `MarkerCluster`. Agregar a la barra lateral un enlace a la ficha de datos y una nota de atribución SCRD bajo licencia Creative Commons Attribution 4.0, junto con la aclaración de que se trata de intervenciones registradas.
 
 ## Risks / Trade-offs
 
-- Las coordenadas y atributos son ficticios y no representan incidencia real → La interfaz y los nombres de variables deben identificarlos claramente como datos simulados.
-- `cartodbdark_matter` y el mapa interactivo requieren acceso a recursos cartográficos en el navegador → La aplicación puede seguir generando las capas, pero el fondo puede no cargar sin conectividad.
-- Mantener el dataset en el estado de sesión conserva consistencia durante una sesión, pero produce una muestra distinta al iniciar otra → Es el comportamiento esperado para datos aleatorios simulados.
+- El servicio puede estar temporalmente caído o cambiar de URL → La interfaz comunica el fallo sin ocultarlo y enlaza a la ficha del conjunto para consultar la fuente.
+- Los registros disponibles se concentran en 2018 y 2019 y no son exhaustivos → La aplicación los identifica como intervenciones documentadas por el Distrito, no como todos los grafitis de la ciudad.
+- Algunos registros pueden carecer de título, artista u otros atributos → El popup muestra solamente los valores presentes.
 
 ## Migration Plan
 
-No hay migración: se agregará `app.py` a la raíz y se ejecutará con Streamlit después de instalar las dependencias indicadas.
+No hay migración persistente. Se elimina la función generadora de datos sintéticos; la aplicación consulta la fuente oficial al iniciar y la caché mantiene la respuesta entre reruns.
