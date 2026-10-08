@@ -2,6 +2,7 @@
 
 import html
 import json
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -22,11 +23,36 @@ URL_MAPA_MUROS_DISPONIBLES = (
     "https://sdcrd.maps.arcgis.com/apps/dashboards/"
     "3bf6088e56054662af6d88880dd809df"
 )
+RUTA_INSTANTANEA_OFICIAL = Path(__file__).parent / "data" / "muros_intervenidos.geojson"
+FECHA_INSTANTANEA_OFICIAL = "2026-10-07"
+
+
+def validar_geojson(coleccion):
+    """Filtra puntos con coordenadas válidas de un FeatureCollection."""
+    if not isinstance(coleccion, dict) or coleccion.get("type") != "FeatureCollection":
+        raise ValueError("La respuesta no es un FeatureCollection GeoJSON.")
+
+    puntos_validos = []
+    for feature in coleccion.get("features", []):
+        geometria = feature.get("geometry") or {}
+        coordenadas = geometria.get("coordinates")
+        if (
+            geometria.get("type") == "Point"
+            and isinstance(coordenadas, list)
+            and len(coordenadas) >= 2
+            and isinstance(coordenadas[0], (int, float))
+            and isinstance(coordenadas[1], (int, float))
+        ):
+            puntos_validos.append(feature)
+
+    if not puntos_validos:
+        raise ValueError("La fuente no contiene puntos con coordenadas válidas.")
+    return {"type": "FeatureCollection", "features": puntos_validos}
 
 
 @st.cache_data(ttl=3600, show_spinner="Cargando intervenciones oficiales...")
 def cargar_geojson_oficial():
-    """Consulta y valida los registros publicados por la SCRD."""
+    """Consulta la capa SCRD; usa su instantánea oficial si no hay red."""
     parametros = urlencode(
         {
             "where": "1=1",
@@ -47,38 +73,17 @@ def cargar_geojson_oficial():
     try:
         with urlopen(solicitud, timeout=25) as respuesta:
             coleccion = json.loads(respuesta.read().decode("utf-8-sig"))
-    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
-        raise RuntimeError(
-            "No fue posible consultar la capa oficial de intervenciones. "
-            "Intenta nuevamente más tarde o abre la ficha del conjunto de datos."
-        ) from error
-
-    if not isinstance(coleccion, dict) or coleccion.get("type") != "FeatureCollection":
-        raise RuntimeError(
-            "La fuente oficial respondió en un formato inesperado. "
-            "No se cargaron datos de reemplazo."
-        )
-
-    puntos_validos = []
-    for feature in coleccion.get("features", []):
-        geometria = feature.get("geometry") or {}
-        coordenadas = geometria.get("coordinates")
-        if (
-            geometria.get("type") == "Point"
-            and isinstance(coordenadas, list)
-            and len(coordenadas) >= 2
-            and isinstance(coordenadas[0], (int, float))
-            and isinstance(coordenadas[1], (int, float))
-        ):
-            puntos_validos.append(feature)
-
-    if not puntos_validos:
-        raise RuntimeError(
-            "La fuente oficial no devolvió puntos para mostrar. "
-            "No se cargaron datos simulados."
-        )
-
-    return {"type": "FeatureCollection", "features": puntos_validos}
+        return validar_geojson(coleccion), False
+    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError, ValueError) as error:
+        try:
+            with RUTA_INSTANTANEA_OFICIAL.open(encoding="utf-8") as archivo:
+                instantanea = validar_geojson(json.load(archivo))
+            return instantanea, True
+        except (OSError, json.JSONDecodeError, ValueError) as error_instantanea:
+            raise RuntimeError(
+                "No fue posible consultar la capa oficial ni cargar su copia local. "
+                f"Revisa la conexión y abre la ficha de datos. ({error})"
+            ) from error_instantanea
 
 
 def crear_popup(propiedades):
@@ -108,7 +113,7 @@ def crear_mapa(geojson, vista):
     mapa = folium.Map(
         location=CENTRO_BOGOTA,
         zoom_start=12,
-        tiles="cartodbdark_matter",
+        tiles="OpenStreetMap",
     )
     features = geojson["features"]
 
@@ -163,6 +168,7 @@ def main():
     st.sidebar.markdown(
         f"[Mapa distrital de muros disponibles]({URL_MAPA_MUROS_DISPONIBLES})"
     )
+    st.sidebar.caption("Mapa base: © OpenStreetMap contributors.")
     st.sidebar.caption(
         "La capa muestra muros intervenidos registrados por el Distrito; "
         "los muros disponibles son superficies para futuras intervenciones."
@@ -170,11 +176,18 @@ def main():
 
     try:
         with st.spinner("Consultando la capa geográfica oficial..."):
-            geojson = cargar_geojson_oficial()
+            geojson, es_instantanea = cargar_geojson_oficial()
     except RuntimeError as error:
         st.error(str(error))
         st.link_button("Abrir la ficha de datos", URL_FICHA_DATOS)
         st.stop()
+
+    if es_instantanea:
+        st.warning(
+            "El servicio oficial no está accesible desde este entorno. "
+            f"Se muestra su copia GeoJSON descargada el {FECHA_INSTANTANEA_OFICIAL}; "
+            "contiene datos oficiales, no simulados."
+        )
 
     años = sorted(
         {

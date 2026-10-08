@@ -14,8 +14,12 @@ La aplicación SHALL obtener los registros GeoJSON de la capa oficial "Muro Inte
 - **THEN** la aplicación visualiza sus puntos reales y conserva los atributos publicados para cada intervención
 
 #### Scenario: El servicio oficial no está disponible
-- **WHEN** la fuente no responde, devuelve un error o no entrega una colección GeoJSON válida
-- **THEN** la aplicación informa que los datos oficiales no pudieron cargarse y no presenta puntos simulados como sustituto
+- **WHEN** la fuente no responde o no entrega una colección GeoJSON válida
+- **THEN** la aplicación presenta la instantánea GeoJSON descargada del mismo servicio oficial y avisa que puede no ser la versión más reciente
+
+#### Scenario: Servicio e instantánea no disponibles
+- **WHEN** la consulta oficial y la lectura de la instantánea local fallan
+- **THEN** la aplicación informa que los datos no pudieron cargarse y no presenta puntos simulados como sustituto
 
 ### Requirement: Comunicar procedencia y cobertura de los datos
 La aplicación SHALL atribuir los datos a la SCRD e indicar que representan intervenciones documentadas por el programa, no un inventario exhaustivo de todos los grafitis de Bogotá.
@@ -31,9 +35,9 @@ La aplicación SHALL mostrar un mapa inicialmente centrado en Bogotá y permitir
 - **WHEN** el usuario abre la aplicación por primera vez
 - **THEN** ve el panel titulado "🎨 Densidad de Arte Urbano - Bogotá", una descripción breve, la opción "Mapa de Calor (Densidad)" seleccionada y un mapa centrado en Bogotá con zoom 12
 
-#### Scenario: Mapa base oscuro
+#### Scenario: Mapa base accesible
 - **WHEN** se presenta cualquiera de las vistas
-- **THEN** el mapa usa la capa base CartoDB Dark Matter y se muestra en el área principal con tamaño suficiente para explorar la ciudad
+- **THEN** el mapa usa una capa base pública que carga sin API key y muestra su atribución
 
 ### Requirement: Mostrar la densidad de intervenciones
 La aplicación SHALL calcular la capa de calor usando las coordenadas de los puntos válidos devueltos por la fuente oficial.
