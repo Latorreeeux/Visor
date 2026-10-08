@@ -51,7 +51,19 @@ La aplicación SHALL agrupar los puntos oficiales en clústeres y permitir consu
 
 #### Scenario: Inspeccionar una intervención
 - **WHEN** el usuario selecciona "Clústeres (Interactivos)" y abre un marcador
-- **THEN** el mapa muestra los valores disponibles de artista, obra, año y localidad para ese registro y presenta las imágenes oficiales enlazadas cuando existan
+- **THEN** el popup muestra los valores disponibles de artista, obra, año y localidad y la galería de imágenes oficiales cuando existan
+
+#### Scenario: Recorrer la galería de una intervención
+- **WHEN** el usuario abre un marcador con imágenes
+- **THEN** el popup anclado al punto muestra una imagen a la vez y controles de navegación anterior y siguiente
+
+#### Scenario: Navegación circular de imágenes
+- **WHEN** el usuario avanza más allá de la última imagen o retrocede desde la primera
+- **THEN** la galería continúa desde el extremo opuesto sin detenerse
+
+#### Scenario: Cambiar la intervención seleccionada
+- **WHEN** el usuario selecciona otro marcador
+- **THEN** el panel cambia a sus imágenes y comienza desde la primera foto disponible
 
 #### Scenario: Agrupar puntos cercanos
 - **WHEN** varios marcadores están próximos en el nivel de zoom actual

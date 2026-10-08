@@ -7,9 +7,10 @@
 
 ## 2. Visualización de datos oficiales
 
-- [x] 2.1 Usar los atributos publicados de artista, obra, año, localidad, formato, temática e imágenes enlazadas en los popups cuando estén disponibles; verificar que los valores coincidan con el GeoJSON.
+- [x] 2.1 Usar los atributos publicados en los popups compactos y mostrar las imágenes oficiales en el panel de la galería cuando estén disponibles.
 - [x] 2.2 Actualizar el sidebar con la atribución SCRD, enlace a la ficha de datos y una nota sobre la cobertura limitada a intervenciones documentadas; verificar que aparezcan en la interfaz.
 - [x] 2.3 Mantener HeatMap y MarkerCluster basados en las geometrías oficiales; verificar centro, zoom, cantidad de puntos y detalles en ambas vistas.
+- [x] 2.4 En vista de clústeres, mostrar una galería circular en el popup de cada marcador con fotos; verificar navegación de ida, vuelta al inicio y selección de otro punto.
 
 ## 3. Integración
 

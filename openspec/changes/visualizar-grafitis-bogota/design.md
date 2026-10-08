@@ -37,11 +37,16 @@ Cachear la respuesta GeoJSON por un periodo limitado para estabilizar los reruns
 
 Conservar el mapa Folium y los modos `HeatMap` y `MarkerCluster`. Usar OpenStreetMap como mapa base, ya que los mosaicos CartoDB Dark Matter requieren una clave de API en el entorno actual. Agregar sus atribuciones y mantener en la barra lateral el enlace a la ficha de datos y la atribución SCRD bajo licencia Creative Commons Attribution 4.0, junto con la aclaración de que se trata de intervenciones registradas.
 
+### Galería de imágenes por intervención
+
+En la vista de clústeres, mostrar los metadatos y la galería dentro del popup del marcador seleccionado. El popup funciona como panel anclado al punto y enseña una imagen a la vez. Usar controles CSS con radios por galería para que las flechas anterior y siguiente recorran las imágenes de forma circular sin depender del canal de eventos Python de `st_folium`. Al abrir otro marcador, su carrusel comienza en la primera imagen. En la vista de calor, conservar el mapa a ancho completo.
+
 ## Risks / Trade-offs
 
 - El servicio puede estar temporalmente caído o cambiar de URL → La interfaz muestra la instantánea oficial con aviso de fecha y enlaza a la ficha para consultar la fuente actual.
 - Los registros disponibles se concentran en 2018 y 2019 y no son exhaustivos → La aplicación los identifica como intervenciones documentadas por el Distrito, no como todos los grafitis de la ciudad.
 - Algunos registros pueden carecer de título, artista u otros atributos → El popup muestra solamente los valores presentes.
+- Los enlaces de fotografía pueden no responder → El panel identifica la foto actual y conserva el enlace directo a la imagen original.
 
 ## Migration Plan
 

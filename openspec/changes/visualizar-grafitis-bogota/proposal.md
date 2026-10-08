@@ -10,6 +10,7 @@ Se necesita una forma rápida e interactiva de explorar la distribución espacia
 - Consultar la capa GeoJSON oficial "Muro Intervenido - Distrito Grafiti" de la Secretaría Distrital de Cultura, Recreación y Deporte.
 - Mostrar únicamente las intervenciones que devuelve la fuente; no fabricar puntos ni sustituirlos por datos simulados si el servicio falla.
 - Permitir alternar entre un mapa de calor y clústeres interactivos, con información emergente para cada grafiti.
+- Mostrar las imágenes del punto seleccionado en una galería dentro del popup del marcador, con navegación circular.
 - Mantener la vista centrada inicialmente en Bogotá sobre el mapa base CartoDB Dark Matter.
 - Atribuir la fuente oficial y explicar que el conjunto documenta intervenciones registradas, no todos los grafitis existentes en la ciudad.
 

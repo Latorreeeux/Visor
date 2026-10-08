@@ -86,8 +86,8 @@ def cargar_geojson_oficial():
             ) from error_instantanea
 
 
-def crear_popup(propiedades):
-    """Construye un popup con los atributos oficiales disponibles."""
+def crear_popup(propiedades, indice_feature=0):
+    """Construye un panel emergente con metadatos y galería circular."""
     campos = [
         ("Artista", "LECNOMARTI"),
         ("Obra", "LECTITOBRA"),
@@ -105,42 +105,73 @@ def crear_popup(propiedades):
             f"<strong>{etiqueta}:</strong> {html.escape(str(valor))}"
         )
 
-    imagenes = []
-    for indice in range(1, 6):
-        url = propiedades.get(f"LECIMAGEN{indice}")
-        if not isinstance(url, str) or not url.strip() or url.strip().lower() in {
-            "n.a.", "n.a", "na"
-        }:
-            continue
-        url = url.strip()
-        partes = urlsplit(url)
-        if partes.scheme not in {"http", "https"} or partes.hostname != "cultured.scrd.gov.co":
-            continue
-        url_segura = html.escape(url, quote=True)
-        imagenes.append(
-            f"<a href=\"{url_segura}\" target=\"_blank\" rel=\"noopener noreferrer\">"
-            f"Abrir imagen {indice}</a>"
-            f"<a href=\"{url_segura}\" target=\"_blank\" rel=\"noopener noreferrer\">"
-            f"<img src=\"{url_segura}\" alt=\"Fotografía {indice} de la intervención\" "
-            "style=\"display:block;max-width:260px;max-height:180px;object-fit:contain;"
-            "margin:8px auto;border-radius:6px\"></a>"
-        )
+    contenido = "<div class='datos-intervencion'>" + "<br>".join(filas) + "</div>"
+    urls = obtener_urls_imagen(propiedades)
+    if urls:
+        id_galeria = f"galeria-{indice_feature}"
+        radios = []
+        diapositivas = []
+        reglas_css = []
+        titulo = html.escape(str(propiedades.get("LECTITOBRA") or "Intervención"), quote=True)
 
-    contenido = "<br>".join(filas)
-    if imagenes:
-        contenido += "<hr><strong>Imágenes de la fuente:</strong>" + "".join(imagenes)
-    return "<div style='min-width: 180px; max-width: 280px'>" + contenido + "</div>"
+        for indice, url in enumerate(urls):
+            id_radio = f"{id_galeria}-foto-{indice}"
+            anterior = f"{id_galeria}-foto-{(indice - 1) % len(urls)}"
+            siguiente = f"{id_galeria}-foto-{(indice + 1) % len(urls)}"
+            url_segura = html.escape(url, quote=True)
+            radios.append(
+                f"<input type='radio' name='{id_galeria}' id='{id_radio}'"
+                f"{' checked' if indice == 0 else ''}>"
+            )
+            diapositivas.append(
+                f"<div class='diapositiva' id='{id_radio}-panel'>"
+                f"<a href='{url_segura}' target='_blank' rel='noopener noreferrer'>"
+                f"<img src='{url_segura}' alt='{titulo} — foto {indice + 1}'></a>"
+                "<div class='navegacion'>"
+                f"<label for='{anterior}' title='Foto anterior'>&#8592;</label>"
+                f"<span>Foto {indice + 1} de {len(urls)}</span>"
+                f"<label for='{siguiente}' title='Foto siguiente'>&#8594;</label>"
+                "</div></div>"
+            )
+            reglas_css.append(
+                f"#{id_radio}:checked ~ .diapositivas #{id_radio}-panel "
+                "{display:block}"
+            )
+
+        contenido += (
+            f"<section class='galeria' id='{id_galeria}'>"
+            f"{''.join(radios)}<div class='diapositivas'>{''.join(diapositivas)}</div></section>"
+            "<style>"
+            ".galeria input{display:none}"
+            ".diapositiva{display:none;text-align:center}"
+            ".diapositiva img{width:100%;height:210px;object-fit:contain;background:#f2f2f2}"
+            ".navegacion{display:flex;align-items:center;justify-content:space-between;padding:6px 14px}"
+            ".navegacion label{cursor:pointer;font-size:24px;font-weight:bold;padding:0 12px;user-select:none}"
+            ".navegacion label:hover{color:#1388d3}"
+            ".navegacion span{font-size:12px}"
+            + "".join(reglas_css)
+            + "</style>"
+        )
+    return "<div style='min-width: 180px; max-width: 300px'>" + contenido + "</div>"
 
 
 def tiene_imagen(feature):
     """Indica si el registro publica al menos una imagen válida."""
-    propiedades = feature.get("properties") or {}
-    return any(
-        isinstance(propiedades.get(f"LECIMAGEN{indice}"), str)
-        and propiedades[f"LECIMAGEN{indice}"].strip().lower()
-        not in {"", "n.a.", "n.a", "na"}
-        for indice in range(1, 6)
-    )
+    return bool(obtener_urls_imagen(feature.get("properties") or {}))
+
+
+def obtener_urls_imagen(propiedades):
+    """Devuelve solo enlaces de imagen HTTP(S) del servidor oficial de SCRD."""
+    urls = []
+    for indice in range(1, 6):
+        valor = propiedades.get(f"LECIMAGEN{indice}")
+        if not isinstance(valor, str) or valor.strip().lower() in {"", "n.a.", "n.a", "na"}:
+            continue
+        url = valor.strip()
+        partes = urlsplit(url)
+        if partes.scheme in {"http", "https"} and partes.hostname == "cultured.scrd.gov.co":
+            urls.append(url)
+    return urls
 
 
 def crear_mapa(geojson, vista):
@@ -163,15 +194,15 @@ def crear_mapa(geojson, vista):
         HeatMap(coordenadas, radius=16, blur=12, min_opacity=0.35).add_to(mapa)
     else:
         cluster = MarkerCluster(name="Intervenciones oficiales").add_to(mapa)
-        for feature in features:
+        for indice, feature in enumerate(features):
             longitud, latitud = feature["geometry"]["coordinates"][:2]
             propiedades = feature.get("properties") or {}
             identificador = propiedades.get("OBJECTID", "")
             titulo = propiedades.get("LECTITOBRA") or f"Intervención {identificador}"
-            folium.Marker(
+            marcador = folium.Marker(
                 location=[latitud, longitud],
                 tooltip=html.escape(str(titulo)),
-                popup=folium.Popup(crear_popup(propiedades), max_width=320),
+                popup=folium.Popup(crear_popup(propiedades, indice), max_width=340),
             ).add_to(cluster)
 
     return mapa
@@ -238,7 +269,7 @@ def main():
         st.sidebar.caption(f"Años registrados en la capa: {', '.join(años)}")
 
     mapa = crear_mapa(geojson, vista)
-    st_folium(mapa, width=1000, height=600)
+    st_folium(mapa, width=1000, height=600, key="mapa_folium")
 
 
 if __name__ == "__main__":
