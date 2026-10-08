@@ -51,7 +51,7 @@ La aplicación SHALL agrupar los puntos oficiales en clústeres y permitir consu
 
 #### Scenario: Inspeccionar una intervención
 - **WHEN** el usuario selecciona "Clústeres (Interactivos)" y abre un marcador
-- **THEN** el mapa muestra los valores disponibles de artista, obra, año y localidad para ese registro
+- **THEN** el mapa muestra los valores disponibles de artista, obra, año y localidad para ese registro y presenta las imágenes oficiales enlazadas cuando existan
 
 #### Scenario: Agrupar puntos cercanos
 - **WHEN** varios marcadores están próximos en el nivel de zoom actual

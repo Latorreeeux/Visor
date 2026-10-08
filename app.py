@@ -4,7 +4,7 @@ import html
 import json
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 import folium
@@ -105,7 +105,42 @@ def crear_popup(propiedades):
             f"<strong>{etiqueta}:</strong> {html.escape(str(valor))}"
         )
 
-    return "<div style='min-width: 180px'>" + "<br>".join(filas) + "</div>"
+    imagenes = []
+    for indice in range(1, 6):
+        url = propiedades.get(f"LECIMAGEN{indice}")
+        if not isinstance(url, str) or not url.strip() or url.strip().lower() in {
+            "n.a.", "n.a", "na"
+        }:
+            continue
+        url = url.strip()
+        partes = urlsplit(url)
+        if partes.scheme not in {"http", "https"} or partes.hostname != "cultured.scrd.gov.co":
+            continue
+        url_segura = html.escape(url, quote=True)
+        imagenes.append(
+            f"<a href=\"{url_segura}\" target=\"_blank\" rel=\"noopener noreferrer\">"
+            f"Abrir imagen {indice}</a>"
+            f"<a href=\"{url_segura}\" target=\"_blank\" rel=\"noopener noreferrer\">"
+            f"<img src=\"{url_segura}\" alt=\"Fotografía {indice} de la intervención\" "
+            "style=\"display:block;max-width:260px;max-height:180px;object-fit:contain;"
+            "margin:8px auto;border-radius:6px\"></a>"
+        )
+
+    contenido = "<br>".join(filas)
+    if imagenes:
+        contenido += "<hr><strong>Imágenes de la fuente:</strong>" + "".join(imagenes)
+    return "<div style='min-width: 180px; max-width: 280px'>" + contenido + "</div>"
+
+
+def tiene_imagen(feature):
+    """Indica si el registro publica al menos una imagen válida."""
+    propiedades = feature.get("properties") or {}
+    return any(
+        isinstance(propiedades.get(f"LECIMAGEN{indice}"), str)
+        and propiedades[f"LECIMAGEN{indice}"].strip().lower()
+        not in {"", "n.a.", "n.a", "na"}
+        for indice in range(1, 6)
+    )
 
 
 def crear_mapa(geojson, vista):
@@ -197,6 +232,8 @@ def main():
         }
     )
     st.sidebar.metric("Intervenciones cargadas", len(geojson["features"]))
+    con_imagen = sum(tiene_imagen(feature) for feature in geojson["features"])
+    st.sidebar.caption(f"{con_imagen} registros tienen al menos una imagen enlazada.")
     if años:
         st.sidebar.caption(f"Años registrados en la capa: {', '.join(años)}")
 

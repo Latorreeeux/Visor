@@ -27,7 +27,7 @@ Consultar el endpoint público `https://serviciosgis.catastrobogota.gov.co/arcgi
 
 ### Campos mostrados
 
-Usar `LECNOMARTI` (artista), `LECTITOBRA` (obra), `LECANIO` (año), `LECNOMLOC` (localidad), `LECTIPOFOR` (formato) y `LECTEMATIC` (temática) cuando tengan valor. Omitir en el popup los campos vacíos. No inferir ni crear un tipo de grafiti que la fuente no publique.
+Usar `LECNOMARTI` (artista), `LECTITOBRA` (obra), `LECANIO` (año), `LECNOMLOC` (localidad), `LECTIPOFOR` (formato), `LECTEMATIC` (temática) y `LECIMAGEN1` a `LECIMAGEN5` (fotografías) cuando tengan valor. Omitir en el popup los campos vacíos. Mostrar las imágenes como miniaturas enlazadas al original y aceptar solo enlaces HTTP(S) del dominio oficial `cultured.scrd.gov.co`. No inferir ni crear un tipo de grafiti que la fuente no publique.
 
 ### Caché y fallos
 
